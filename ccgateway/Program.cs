@@ -54,6 +54,15 @@ namespace ccgateway
                 ip = "127.0.0.1";
             }
 
+            var loader = new Loader<ICCGatewayPlugin>();
+            var msgs = new List<string>();
+
+            loader.Load(folder, msgs);
+            foreach (var msg in msgs)
+            {
+                Console.WriteLine(msg);
+            }
+
             using (var socket = new ResponseSocket())
             {
                 socket.Bind($"tcp://{ip}:55555");
@@ -75,26 +84,18 @@ namespace ccgateway
                         }
                         else
                         {
-                            var loader = new Loader<ICCGatewayPlugin>();
-                            var msgs = new List<string>();
-
-                            loader.Load(folder, msgs);
-                            foreach (var msg in msgs)
-                            {
-                                Console.WriteLine(msg);
-                            }
-
                             string action = command[0];
-                            command = command.Skip(1).ToArray();
-
                             ICCGatewayPlugin plugin = loader.Get(action);
-                            var pluginConfig = config.GetSection(action);
+
                             if (plugin == null)
                             {
                                 response = "miss";
                             }
                             else
                             {
+                                command = command.Skip(1).ToArray();
+                                var pluginConfig = config.GetSection(action);
+
                                 string msg;
                                 bool done = plugin.Run(pluginConfig, command, out msg);
                                 if (done)
