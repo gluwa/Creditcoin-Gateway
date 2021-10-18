@@ -17,21 +17,23 @@
     along with Creditcoin. If not, see <https://www.gnu.org/licenses/>.
 */
 
-using ccplugin;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using CCGatewayPlugin;
 
 namespace gerc20
 {
-    class Erc20 : ICCGatewayPlugin
+    class Erc20 : ICCGatewayPluginAsync
     {
         private static int mConfirmationsExpected = 12;
 
-        public bool Run(IConfiguration cfg, string[] command, out string msg)
+        public async Task<Tuple<bool, string>> Run(IConfiguration cfg, string[] command)
         {
             Debug.Assert(command != null);
             Debug.Assert(command.Length > 0);
+            string msg;
             if (command[0].Equals("verify"))
             {
                 Debug.Assert(command.Length == 7);
@@ -54,35 +56,35 @@ namespace gerc20
                 if (string.IsNullOrWhiteSpace(rpcUrl))
                 {
                     msg = "erc20.rpc is not set";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 var web3 = new Nethereum.Web3.Web3(rpcUrl);
 
-                var tx = web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(txId).Result;
+                var tx = await web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(txId);
                 if (tx == null)
                 {
                     msg = "Failed to retrieve transaction info";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
-                var txReceipt = web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(txId).Result;
+                var txReceipt = await web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(txId);
                 if (txReceipt.Status.Value == 0)
                 {
                     msg = "Invalid transaction: transaction status is 'failed'";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 int confirmations = 0;
                 if (tx.BlockNumber != null)
                 {
-                    var blockNumber = web3.Eth.Blocks.GetBlockNumber.SendRequestAsync().Result;
+                    var blockNumber = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
                     confirmations = (int)(blockNumber.Value - tx.BlockNumber.Value);
                 }
 
                 if (confirmations < mConfirmationsExpected)
                 {
                     msg = "Invalid transaction: not enough confirmations";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 var sourceAddressStringSegments = sourceAddressString.Split('@');
@@ -93,13 +95,13 @@ namespace gerc20
                 if (!sourceAddressStringSegments[0].Equals(destinationAddressStringSegment[0]))
                 {
                     msg = "Invalid transaction: source and destination erc20 don't match";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 if (!sourceAddressString.Equals(tx.From, System.StringComparison.OrdinalIgnoreCase))
                 {
                     msg = "Invalid transaction: wrong sourceAddressString";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 string ercTransferContract = sourceAddressStringSegments[0];
@@ -107,13 +109,13 @@ namespace gerc20
                 if (string.IsNullOrWhiteSpace(ercTransferContract))
                 {
                     msg = "Invalid erc20 address";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 if (!tx.To.Equals(ercTransferContract, StringComparison.OrdinalIgnoreCase))
                 {
                     msg = "transaction contract doesn't match ercTransferContract";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 string ercTransferContractAbi = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"ccid\",\"type\":\"string\"}],\"name\":\"transfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]";
@@ -127,29 +129,29 @@ namespace gerc20
                 if (!destinationAddressString.Equals(to, StringComparison.InvariantCultureIgnoreCase))
                 {
                     msg = "Invalid transaction: wrong destination";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 var value = inputs[1].Result.ToString();
                 if (!destinationAmount.Equals(value))
                 {
                     msg = "Invalid transaction: wrong amount";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 var tag = inputs[2].Result.ToString();
                 if (!tag.Equals(proof))
                 {
                     msg = "Invalid transaction: wrong proof";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 msg = null;
-                return true;
+                return Tuple.Create(true, msg);
             }
 
             msg = "Unknown command: " + command[0];
-            return false;
+            return Tuple.Create(false, msg);
         }
     }
 }
