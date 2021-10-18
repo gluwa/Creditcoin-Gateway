@@ -24,12 +24,34 @@ using System.Diagnostics;
 
 namespace gethereum
 {
+    class IterationData
+    {
+        public double Web3Creation { get; set; }
+        public double RpcGetTransactionByHash { get; set; }
+        public double RpcGetTransactionReceipt { get; set; }
+        public double RpcGetBlockNumber { get; set; }
+    }
+
     class Ethereum : ICCGatewayPlugin
     {
         private static int mConfirmationsExpected = 12;
+        private static Stopwatch timer;
+
+        private static double reportTime()
+        {
+            timer.Stop();
+            var totalSeconds = timer.Elapsed.TotalSeconds;
+
+            timer.Restart();
+            return totalSeconds;
+        }
 
         public bool Run(IConfiguration cfg, string[] command, out string msg)
         {
+            var record = new IterationData {};
+            timer = new Stopwatch();
+            timer.Start();
+
             Debug.Assert(command != null);
             Debug.Assert(command.Length > 0);
             if (command[0].Equals("verify"))
@@ -57,7 +79,9 @@ namespace gethereum
                     return false;
                 }
 
+                timer.Restart();
                 var web3 = new Nethereum.Web3.Web3(rpcUrl);
+                record.Web3Creation = reportTime();
 
                 var tx = web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(txId).Result;
                 if (tx == null)
@@ -65,12 +89,15 @@ namespace gethereum
                     msg = "Failed to retrieve transaction info";
                     return false;
                 }
+                record.RpcGetTransactionByHash = reportTime();
+
                 var txReceipt = web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(txId).Result;
                 if (txReceipt.Status.Value == 0)
                 {
                     msg = "Invalid transaction: transaction status is 'failed'";
                     return false;
                 }
+                record.RpcGetTransactionReceipt = reportTime();
 
                 int confirmations = 0;
                 if (tx.BlockNumber != null)
@@ -78,6 +105,7 @@ namespace gethereum
                     var blockNumber = web3.Eth.Blocks.GetBlockNumber.SendRequestAsync().Result;
                     confirmations = (int)(blockNumber.Value - tx.BlockNumber.Value);
                 }
+                record.RpcGetBlockNumber = reportTime();
 
                 if (confirmations < mConfirmationsExpected)
                 {
@@ -163,7 +191,8 @@ namespace gethereum
                     }
                 }
 
-                msg = null;
+                msg = $"{record.Web3Creation},{record.RpcGetTransactionByHash},{record.RpcGetTransactionReceipt},{record.RpcGetBlockNumber}";
+//                msg = null;
                 return true;
             }
 

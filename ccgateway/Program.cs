@@ -63,12 +63,15 @@ namespace ccgateway
                 Console.WriteLine(msg);
             }
 
+            uint i = 0;
+            Console.Error.WriteLine("Iteration,Web3Creation,RpcGetTransactionByHash,RpcGetTransactionReceipt,RpcGetBlockNumber");
             using (var socket = new ResponseSocket())
             {
                 socket.Bind($"tcp://{ip}:55555");
 
                 while (true)
                 {
+                    i++;
                     string response;
                     string requestString = null;
                     try
@@ -100,7 +103,8 @@ namespace ccgateway
                                 bool done = plugin.Run(pluginConfig, command, out msg);
                                 if (done)
                                 {
-                                    Debug.Assert(msg == null);
+                                    // Debug.Assert(msg == null);
+                                    Console.Error.WriteLine($"{i},{msg}");
                                     response = "good";
                                 }
                                 else
