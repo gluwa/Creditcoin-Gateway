@@ -37,7 +37,7 @@ namespace ccgateway
     {
         static string folder;
         static IConfiguration config;
-        static async Task ProcessRequest(NetMQFrame id, string requestString)
+        static async Task ProcessRequest(Loader<ICCGatewayPluginAsync> loader, NetMQFrame id, string requestString)
         {
             string[] command = requestString.Split();
             string response;
@@ -49,15 +49,6 @@ namespace ccgateway
             }
             else
             {
-                var loader = new Loader<ICCGatewayPluginAsync>();
-                var msgs = new List<string>();
-
-                loader.Load(folder, msgs);
-                foreach (var msg in msgs)
-                {
-                    Console.WriteLine(msg);
-                }
-
                 string action = command[0];
                 command = command.Skip(1).ToArray();
 
@@ -97,6 +88,14 @@ namespace ccgateway
 
         static void ServerAsync(string ip)
         {
+            var loader = new Loader<ICCGatewayPluginAsync>();
+            var msgs = new List<string>();
+
+            loader.Load(folder, msgs);
+            foreach (var msg in msgs)
+            {
+                Console.WriteLine(msg);
+            }
             using (var frontEnd = new RouterSocket($"@tcp://{ip}:55555"))
             using (var backEnd = new DealerSocket("@inproc://back"))
             using (var poller = new NetMQPoller { frontEnd, backEnd })
@@ -109,9 +108,9 @@ namespace ccgateway
 
                     ThreadPool.QueueUserWorkItem(async ctx =>
                     {
-                        var (id, contents) = (Tuple<NetMQFrame, string>)ctx;
-                        await ProcessRequest(id, contents);
-                    }, Tuple.Create(identity, request));
+                        var (loader, id, contents) = (Tuple<Loader<ICCGatewayPluginAsync>, NetMQFrame, string>)ctx;
+                        await ProcessRequest(loader, id, contents);
+                    }, Tuple.Create(loader, identity, request));
 
                 };
                 backEnd.ReceiveReady += (sender, args) =>
