@@ -60,7 +60,16 @@ namespace ccgateway
                 }
                 else
                 {
-                    Tuple<bool, string> result = await plugin.Run(pluginConfig, command);
+                    Tuple<bool, string> result;
+                    try
+                    {
+
+                        result = await plugin.Run(pluginConfig, command);
+                    } catch (Exception ex)
+                    {
+                        result = Tuple.Create(false, ex.Message);
+
+                    }
                     Debug.Assert(result.Item2 != null);
                     if (result.Item1)
                     {
