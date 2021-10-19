@@ -24,9 +24,13 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="3.1.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.4" />
-    <PackageReference Include="NetMQ" Version="4.0.0.207" />
+    <PackageReference Include="NetMQ" Version="4.0.1.6" />
     <PackageReference Include="System.Diagnostics.Debug" Version="4.3.0" />
     <PackageReference Include="ccplugin" Version="*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CCGatewayPlugin\CCGatewayPlugin.csproj" />
   </ItemGroup>
 
   <ItemGroup>

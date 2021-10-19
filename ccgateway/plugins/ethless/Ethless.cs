@@ -17,19 +17,20 @@
     along with Creditcoin. If not, see <https://www.gnu.org/licenses/>.
 */
 
-using ccplugin;
+using CCGatewayPlugin;
 using Microsoft.Extensions.Configuration;
 using Nethereum.Hex.HexTypes;
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace gethless
 {
-    class Ethless : ICCGatewayPlugin
+    class Ethless : ICCGatewayPluginAsync
     {
         private static int mConfirmationsExpected = 12;
 
-        public bool Run(IConfiguration cfg, string[] command, out string msg)
+        public async Task<Tuple<bool, string>> Run(IConfiguration cfg, string[] command)
         {
             Debug.Assert(command != null);
             Debug.Assert(command.Length > 0);
@@ -54,36 +55,32 @@ namespace gethless
                 string rpcUrl = cfg["rpc"];
                 if (string.IsNullOrWhiteSpace(rpcUrl))
                 {
-                    msg = "ethless.rpc is not set";
-                    return false;
+                    return Tuple.Create(false, "ethless.rpc is not set");
                 }
 
                 var web3 = new Nethereum.Web3.Web3(rpcUrl);
 
-                var tx = web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(txId).Result;
+                var tx = await web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(txId);
                 if (tx == null)
                 {
-                    msg = "Failed to retrieve transaction info";
-                    return false;
+                    return Tuple.Create(false, "Failed to retrieve transaction info");
                 }
-                var txReceipt = web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(txId).Result;
+                var txReceipt = await web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(txId);
                 if (txReceipt.Status.Value == 0)
                 {
-                    msg = "Invalid transaction: transaction status is 'failed'";
-                    return false;
+                    return Tuple.Create(false, "Invalid transaction: transaction status is 'failed'");
                 }
 
                 int confirmations = 0;
                 if (tx.BlockNumber != null)
                 {
-                    var blockNumber = web3.Eth.Blocks.GetBlockNumber.SendRequestAsync().Result;
+                    var blockNumber = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
                     confirmations = (int)(blockNumber.Value - tx.BlockNumber.Value);
                 }
 
                 if (confirmations < mConfirmationsExpected)
                 {
-                    msg = "Invalid transaction: not enough confirmations";
-                    return false;
+                    return Tuple.Create(false, "Invalid transaction: not enough confirmations");
                 }
 
                 var sourceAddressStringSegments = sourceAddressString.Split('@');
@@ -93,22 +90,19 @@ namespace gethless
 
                 if (!sourceAddressStringSegments[0].Equals(destinationAddressStringSegment[0]))
                 {
-                    msg = "Invalid transaction: source and destination ethless tokens (Gluwacoins) don't match";
-                    return false;
+                    return Tuple.Create(false, "Invalid transaction: source and destination ethless tokens (Gluwacoins) don't match");
                 }
 
                 string ethlessContract = sourceAddressStringSegments[0];
 
                 if (string.IsNullOrWhiteSpace(ethlessContract))
                 {
-                    msg = "Invalid ethless address";
-                    return false;
+                    return Tuple.Create(false, "Invalid ethless address");
                 }
 
                 if (!tx.To.Equals(ethlessContract, StringComparison.OrdinalIgnoreCase))
                 {
-                    msg = "transaction contract doesn't match ethlessContract";
-                    return false;
+                    return Tuple.Create(false, "transaction contract doesn't match ethlessContract");
                 }
 
                 string ethlessContractAbi = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"_from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_value\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_fee\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_nonce\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_sig\",\"type\":\"bytes\"}],\"name\":\"transfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]";
@@ -121,38 +115,32 @@ namespace gethless
                 var from = inputs[0].Result.ToString();
                 if (!sourceAddressString.Equals(from, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    msg = "Invalid transaction: wrong source";
-                    return false;
+                    return Tuple.Create(false, "Invalid transaction: wrong source");
                 }
 
                 var to = inputs[1].Result.ToString();
                 if (!destinationAddressString.Equals(to, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    msg = "Invalid transaction: wrong destination";
-                    return false;
+                    return Tuple.Create(false, "Invalid transaction: wrong destination");
                 }
 
                 var value = inputs[2].Result.ToString();
                 if (!destinationAmount.Equals(value))
                 {
-                    msg = "Invalid transaction: wrong amount";
-                    return false;
+                    return Tuple.Create(false, "Invalid transaction: wrong destination");
                 }
 
                 var tag = inputs[4].Result.ToString();
                 var nonce = new HexBigInteger("0x" + proof.Substring(10)); //namespace length 6 plus prefix length 4
                 if (!tag.Equals(nonce.Value.ToString()))
                 {
-                    msg = "Invalid transaction: wrong proof";
-                    return false;
+                    return Tuple.Create(false, "Invalid transaction: wrong proof");
                 }
 
-                msg = null;
-                return true;
+                return Tuple.Create<bool, string>(true, null);
             }
 
-            msg = "Unknown command: " + command[0];
-            return false;
+            return Tuple.Create(false, "Unknown command: " + command[0]);
         }
     }
 }

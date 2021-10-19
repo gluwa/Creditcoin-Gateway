@@ -18,6 +18,10 @@
     <PackageReference Include="Nethereum.Web3" Version="3.8.0" />
     <PackageReference Include="ccplugin" Version="*" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\CCGatewayPlugin\CCGatewayPlugin.csproj" />
+  </ItemGroup>
   
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ProjectDir).." OverwriteReadOnlyFiles="true" SkipUnchangedFiles="false" />

@@ -17,21 +17,23 @@
     along with Creditcoin. If not, see <https://www.gnu.org/licenses/>.
 */
 
-using ccplugin;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using CCGatewayPlugin;
 
 namespace gethereum
 {
-    class Ethereum : ICCGatewayPlugin
+    class Ethereum : ICCGatewayPluginAsync
     {
         private static int mConfirmationsExpected = 12;
 
-        public bool Run(IConfiguration cfg, string[] command, out string msg)
+        public async Task<Tuple<bool, string>> Run(IConfiguration cfg, string[] command)
         {
             Debug.Assert(command != null);
             Debug.Assert(command.Length > 0);
+            string msg = null;
             if (command[0].Equals("verify"))
             {
                 Debug.Assert(command.Length == 7);
@@ -41,6 +43,7 @@ namespace gethereum
                 string destinationAmount = command[4];
                 string txId = command[5];
                 string unused = command[6];
+
 
 #if DEBUG
                 string confirmationsCount = cfg["confirmationsCount"];
@@ -54,41 +57,41 @@ namespace gethereum
                 if (string.IsNullOrWhiteSpace(rpcUrl))
                 {
                     msg = "ethereum.rpc is not set";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 var web3 = new Nethereum.Web3.Web3(rpcUrl);
 
-                var tx = web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(txId).Result;
+                var tx = await web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(txId);
                 if (tx == null)
                 {
                     msg = "Failed to retrieve transaction info";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
-                var txReceipt = web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(txId).Result;
+                var txReceipt = await web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(txId);
                 if (txReceipt.Status.Value == 0)
                 {
                     msg = "Invalid transaction: transaction status is 'failed'";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 int confirmations = 0;
                 if (tx.BlockNumber != null)
                 {
-                    var blockNumber = web3.Eth.Blocks.GetBlockNumber.SendRequestAsync().Result;
+                    var blockNumber = await web3.Eth.Blocks.GetBlockNumber.SendRequestAsync();
                     confirmations = (int)(blockNumber.Value - tx.BlockNumber.Value);
                 }
 
                 if (confirmations < mConfirmationsExpected)
                 {
                     msg = "Invalid transaction: not enough confirmations";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 if (!sourceAddressString.Equals(tx.From, System.StringComparison.OrdinalIgnoreCase))
                 {
                     msg = "Invalid transaction: wrong sourceAddressString";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 if (destinationAddressString.Equals("creditcoin"))
@@ -98,20 +101,20 @@ namespace gethereum
                     if (string.IsNullOrWhiteSpace(creditcoinContract))
                     {
                         msg = "ethereum.creditcoinContract is not set";
-                        return false;
+                        return Tuple.Create(false, msg);
                     }
 
                     if (!tx.To.Equals(creditcoinContract, StringComparison.OrdinalIgnoreCase))
                     {
                         msg = "transaction contract doesn't match creditcoinContract";
-                        return false;
+                        return Tuple.Create(false, msg);
                     }
 
                     string creditcoinContractAbi = cfg["creditcoinContractAbi"];
                     if (string.IsNullOrWhiteSpace(creditcoinContractAbi))
                     {
                         msg = "ethereum.creditcoinContractAbi is not set";
-                        return false;
+                        return Tuple.Create(false, msg);
                     }
 
                     var contract = web3.Eth.GetContract(creditcoinContractAbi, creditcoinContract);
@@ -122,14 +125,14 @@ namespace gethereum
                     if (destinationAmount != value)
                     {
                         msg = "Invalid transaction: wrong amount";
-                        return false;
+                        return Tuple.Create(false, msg);
                     }
 
                     var tag = inputs[1].Result.ToString();
                     if (!tag.Equals(proof))
                     {
                         msg = "Invalid transaction: wrong proof";
-                        return false;
+                        return Tuple.Create(false, msg);
                     }
                 }
                 else
@@ -137,13 +140,13 @@ namespace gethereum
                     if (destinationAmount != tx.Value.Value.ToString())
                     {
                         msg = "Invalid transaction: wrong amount";
-                        return false;
+                        return Tuple.Create(false, msg);
                     }
 
                     if (tx.Input == null)
                     {
                         msg = "Invalid transaction: expecting data";
-                        return false;
+                        return Tuple.Create(false, msg);
                     }
 
                     if (!proof.StartsWith("0x"))
@@ -153,22 +156,22 @@ namespace gethereum
                     if (!tx.Input.Equals(proof, System.StringComparison.OrdinalIgnoreCase))
                     {
                         msg = "Invalid transaction: wrong proof";
-                        return false;
+                        return Tuple.Create(false, msg);
                     }
 
                     if (!tx.To.Equals(destinationAddressString, System.StringComparison.OrdinalIgnoreCase))
                     {
                         msg = "Invalid transaction: wrong destinationAddressString";
-                        return false;
+                        return Tuple.Create(false, msg);
                     }
                 }
 
                 msg = null;
-                return true;
+                return Tuple.Create(true, msg);
             }
 
             msg = "Unknown command: " + command[0];
-            return false;
+            return Tuple.Create(false, msg);
         }
     }
 }

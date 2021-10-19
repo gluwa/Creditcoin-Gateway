@@ -19,7 +19,10 @@
     <PackageReference Include="Nethereum.RPC" Version="3.8.0" />
     <PackageReference Include="Nethereum.Signer" Version="3.8.0" />
     <PackageReference Include="Nethereum.Web3" Version="3.8.0" />
-    <PackageReference Include="ccplugin" Version="*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\CCGatewayPlugin\CCGatewayPlugin.csproj" />
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
