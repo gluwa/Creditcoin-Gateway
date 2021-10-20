@@ -50,16 +50,16 @@ namespace ccgateway
             else
             {
                 string action = command[0];
-                command = command.Skip(1).ToArray();
 
                 ICCGatewayPluginAsync plugin = loader.Get(action);
-                var pluginConfig = config.GetSection(action);
                 if (plugin == null)
                 {
                     response = "miss";
                 }
                 else
                 {
+                    command = command.Skip(1).ToArray();
+                    var pluginConfig = config.GetSection(action);
                     Tuple<bool, string> result;
                     try
                     {
