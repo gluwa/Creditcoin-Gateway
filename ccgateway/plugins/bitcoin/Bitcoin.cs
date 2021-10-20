@@ -33,7 +33,7 @@ namespace gbitcoin
     {
         private static int mConfirmationsExpected = 6;
 
-        public Task<Tuple<bool, string>> Run(IConfiguration cfg, string[] command)
+        public async Task<Tuple<bool, string>> Run(IConfiguration cfg, string[] command)
         {
             Debug.Assert(command != null);
             Debug.Assert(command.Length > 0);
@@ -53,14 +53,14 @@ namespace gbitcoin
                 if (string.IsNullOrWhiteSpace(rpcAddress))
                 {
                     msg = "bitcoin.rpc is not set";
-                    return Task.FromResult(Tuple.Create(false, msg));
+                    return Tuple.Create(false, msg);
                 }
 
                 string credential = cfg["credential"];
                 if (string.IsNullOrWhiteSpace(credential))
                 {
                     msg = "bitcoin.credential is not set";
-                    return Task.FromResult(Tuple.Create(false, msg));
+                    return Tuple.Create(false, msg);
                 }
 
 #if DEBUG
@@ -76,20 +76,20 @@ namespace gbitcoin
                 if (!uint256.TryParse(txId, out var transactionId))
                 {
                     msg = "Invalid transaction: transaction ID invalid";
-                    return Task.FromResult(Tuple.Create(false, msg));
+                    return Tuple.Create(false, msg);
                 }
 
-                var transactionInfoResponse = rpcClient.GetRawTransactionInfo(transactionId);
+                var transactionInfoResponse = await rpcClient.GetRawTransactionInfoAsync(transactionId);
                 if (transactionInfoResponse.Confirmations < mConfirmationsExpected)
                 {
                     msg = "Invalid transaction: not enough confirmations";
-                    return Task.FromResult(Tuple.Create(false, msg));
+                    return Tuple.Create(false, msg);
                 }
 
                 if (transactionInfoResponse.Transaction.Outputs.Count < 2 || transactionInfoResponse.Transaction.Outputs.Count > 3)
                 {
                     msg = "Invalid transaction: unexpected amount of output";
-                    return Task.FromResult(Tuple.Create(false, msg));
+                    return Tuple.Create(false, msg);
                 }
 
                 var destinationAddress = BitcoinAddress.Create(destinationAddressString, network);
@@ -98,13 +98,13 @@ namespace gbitcoin
                 if (paymentCoin == null)
                 {
                     msg = "Invalid transaction: wrong destinationAddressString";
-                    return Task.FromResult(Tuple.Create(false, msg));
+                    return Tuple.Create(false, msg);
                 }
 
                 if (paymentCoin.TxOut.Value.Satoshi.ToString() != destinationAmount)
                 {
                     msg = "Invalid transaction: wrong amount";
-                    return Task.FromResult(Tuple.Create(false, msg));
+                    return Tuple.Create(false, msg);
                 }
 
                 var bytes = Encoding.UTF8.GetBytes(orderId);
@@ -112,13 +112,13 @@ namespace gbitcoin
                 if (nullDataCoin == null)
                 {
                     msg = "Invalid transaction: wrong orderId";
-                    return Task.FromResult(Tuple.Create(false, msg));
+                    return Tuple.Create(false, msg);
                 }
 
                 if (nullDataCoin.TxOut.Value.CompareTo(Money.Zero) != 0)
                 {
                     msg = "Invalid transaction: expecting a message";
-                    return Task.FromResult(Tuple.Create(false, msg));
+                    return Tuple.Create(false, msg);
                 }
 
                 var sourceAddress = BitcoinAddress.Create(sourceAddressString, network);
@@ -126,15 +126,15 @@ namespace gbitcoin
                 if (!Script.VerifyScript(input.ScriptSig, transactionInfoResponse.Transaction, 0, new TxOut(null, sourceAddress)))
                 {
                     msg = "Invalid transaction: wrong sourceAddressString";
-                    return Task.FromResult(Tuple.Create(false, msg));
+                    return Tuple.Create(false, msg);
                 }
 
                 msg = null;
-                return Task.FromResult(Tuple.Create(true, msg));
+                return Tuple.Create(true, msg);
             }
 
             msg = "Unknown command: " + command[0];
-            return Task.FromResult(Tuple.Create(false, msg));
+            return Tuple.Create(false, msg);
         }
     }
 }
