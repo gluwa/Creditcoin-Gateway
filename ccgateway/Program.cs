@@ -34,6 +34,16 @@ namespace ccgateway
     {
         static void Main(string[] args)
         {
+            bool verboseLogging = false;
+            if(args.Length > 0)
+            {
+                if(args[0] == "-v")
+                {
+                    verboseLogging = true;
+                    Console.WriteLine($"{getTimestamp()}: Argument '-v' found -- Verbose logging enabled.");
+                }
+            }
+
             IConfiguration config = new ConfigurationBuilder()
                     .AddJsonFile("appsettings.json", true, false)
                     .AddJsonFile("appsettings.dev.json", true, true)
@@ -60,7 +70,7 @@ namespace ccgateway
             loader.Load(folder, msgs);
             foreach (var msg in msgs)
             {
-                Console.WriteLine(msg);
+                Console.WriteLine($"{getTimestamp()}: {msg}");
             }
 
             using (var socket = new ResponseSocket())
@@ -80,26 +90,34 @@ namespace ccgateway
                         if (command.Length < 2)
                         {
                             response = "poor";
-                            Console.WriteLine(requestString + ": not enough parameters");
+                            Console.WriteLine($"{getTimestamp()}: Not enough parameters ({requestString}).");
                         }
                         else
                         {
                             string action = command[0];
+                            if (verboseLogging)
+                                Console.WriteLine($"{getTimestamp()}: Processing action '{action}' ({requestString}).");
                             ICCGatewayPlugin plugin = loader.Get(action);
 
                             if (plugin == null)
                             {
+                                if (verboseLogging)
+                                    Console.WriteLine($"{getTimestamp()}: Plugin for {action} not found!");
                                 response = "miss";
                             }
                             else
                             {
                                 command = command.Skip(1).ToArray();
                                 var pluginConfig = config.GetSection(action);
+                                if (verboseLogging)
+                                    Console.WriteLine($"{getTimestamp()}: Processing request '{requestString}'.");
 
                                 string msg;
                                 bool done = plugin.Run(pluginConfig, command, out msg);
                                 if (done)
                                 {
+                                    if (verboseLogging)
+                                        Console.WriteLine($"{getTimestamp()}: Request '{requestString}' succeeded.");
                                     Debug.Assert(msg == null);
                                     response = "good";
                                 }
@@ -108,7 +126,7 @@ namespace ccgateway
                                     Debug.Assert(msg != null);
                                     StringBuilder err = new StringBuilder();
                                     err.Append(requestString).Append(": ").Append(msg);
-                                    Console.WriteLine(err.ToString());
+                                    Console.WriteLine($"{getTimestamp()}: {err.ToString()}");
                                     response = "fail";
                                 }
                             }
@@ -122,12 +140,16 @@ namespace ccgateway
                             err.Append(requestString).Append(": ");
                         }
                         err.Append(x.Message);
-                        Console.WriteLine(err.ToString());
+                        Console.WriteLine($"{getTimestamp()}: {err.ToString()}");
                         response = "fail";
                     }
                     socket.SendFrame(response);
                 }
             }
+        }
+
+        static string getTimestamp(){
+            return DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffffffK");
         }
     }
 }
