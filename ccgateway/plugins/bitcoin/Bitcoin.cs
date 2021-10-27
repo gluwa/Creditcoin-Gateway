@@ -17,7 +17,6 @@
     along with Creditcoin. If not, see <https://www.gnu.org/licenses/>.
 */
 
-using ccplugin;
 using Microsoft.Extensions.Configuration;
 using NBitcoin;
 using NBitcoin.RPC;
@@ -25,17 +24,21 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using CCGatewayPlugin;
+using System.Threading.Tasks;
 
 namespace gbitcoin
 {
-    class Bitcoin : ICCGatewayPlugin
+    class Bitcoin : ICCGatewayPluginAsync
     {
         private static int mConfirmationsExpected = 6;
 
-        public bool Run(IConfiguration cfg, string[] command, out string msg)
+        public async Task<Tuple<bool, string>> Run(IConfiguration cfg, string[] command)
         {
             Debug.Assert(command != null);
             Debug.Assert(command.Length > 0);
+            string msg;
+
             if (command[0].Equals("verify"))
             {
                 Debug.Assert(command.Length == 7);
@@ -50,14 +53,14 @@ namespace gbitcoin
                 if (string.IsNullOrWhiteSpace(rpcAddress))
                 {
                     msg = "bitcoin.rpc is not set";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 string credential = cfg["credential"];
                 if (string.IsNullOrWhiteSpace(credential))
                 {
                     msg = "bitcoin.credential is not set";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
 #if DEBUG
@@ -73,20 +76,20 @@ namespace gbitcoin
                 if (!uint256.TryParse(txId, out var transactionId))
                 {
                     msg = "Invalid transaction: transaction ID invalid";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
-                var transactionInfoResponse = rpcClient.GetRawTransactionInfo(transactionId);
+                var transactionInfoResponse = await rpcClient.GetRawTransactionInfoAsync(transactionId);
                 if (transactionInfoResponse.Confirmations < mConfirmationsExpected)
                 {
                     msg = "Invalid transaction: not enough confirmations";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 if (transactionInfoResponse.Transaction.Outputs.Count < 2 || transactionInfoResponse.Transaction.Outputs.Count > 3)
                 {
                     msg = "Invalid transaction: unexpected amount of output";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 var destinationAddress = BitcoinAddress.Create(destinationAddressString, network);
@@ -95,13 +98,13 @@ namespace gbitcoin
                 if (paymentCoin == null)
                 {
                     msg = "Invalid transaction: wrong destinationAddressString";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 if (paymentCoin.TxOut.Value.Satoshi.ToString() != destinationAmount)
                 {
                     msg = "Invalid transaction: wrong amount";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 var bytes = Encoding.UTF8.GetBytes(orderId);
@@ -109,13 +112,13 @@ namespace gbitcoin
                 if (nullDataCoin == null)
                 {
                     msg = "Invalid transaction: wrong orderId";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 if (nullDataCoin.TxOut.Value.CompareTo(Money.Zero) != 0)
                 {
                     msg = "Invalid transaction: expecting a message";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 var sourceAddress = BitcoinAddress.Create(sourceAddressString, network);
@@ -123,15 +126,15 @@ namespace gbitcoin
                 if (!Script.VerifyScript(input.ScriptSig, transactionInfoResponse.Transaction, 0, new TxOut(null, sourceAddress)))
                 {
                     msg = "Invalid transaction: wrong sourceAddressString";
-                    return false;
+                    return Tuple.Create(false, msg);
                 }
 
                 msg = null;
-                return true;
+                return Tuple.Create(true, msg);
             }
 
             msg = "Unknown command: " + command[0];
-            return false;
+            return Tuple.Create(false, msg);
         }
     }
 }

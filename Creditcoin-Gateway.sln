@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.28922.388
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31717.71
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "plugins", "plugins", "{C0955739-6443-499E-A68A-EDFFBED79180}"
 EndProject
@@ -13,12 +13,23 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ccgateway", "ccgateway\ccga
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "gbitcoin", "ccgateway\plugins\bitcoin\gbitcoin.csproj", "{5AB22611-525F-41D4-8EC7-9FAD5EB3EFC0}"
+	ProjectSection(ProjectDependencies) = postProject
+		{71E49440-1FC7-4B2A-A58C-00D5968B1AEE} = {71E49440-1FC7-4B2A-A58C-00D5968B1AEE}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "gethereum", "ccgateway\plugins\ethereum\gethereum.csproj", "{20E5B653-077E-4424-AF51-4F976FB273B7}"
+	ProjectSection(ProjectDependencies) = postProject
+		{71E49440-1FC7-4B2A-A58C-00D5968B1AEE} = {71E49440-1FC7-4B2A-A58C-00D5968B1AEE}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "gerc20", "ccgateway\plugins\erc20\gerc20.csproj", "{B1131F14-1DE6-4F75-8E47-03877F791DFD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{71E49440-1FC7-4B2A-A58C-00D5968B1AEE} = {71E49440-1FC7-4B2A-A58C-00D5968B1AEE}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "gethless", "ccgateway\plugins\ethless\gethless.csproj", "{7906EC0F-F070-44A3-A45B-B97785EF116A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CCGatewayPlugin", "CCGatewayPlugin\CCGatewayPlugin.csproj", "{71E49440-1FC7-4B2A-A58C-00D5968B1AEE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -68,6 +79,14 @@ Global
 		{7906EC0F-F070-44A3-A45B-B97785EF116A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7906EC0F-F070-44A3-A45B-B97785EF116A}.Release|x64.ActiveCfg = Release|Any CPU
 		{7906EC0F-F070-44A3-A45B-B97785EF116A}.Release|x64.Build.0 = Release|Any CPU
+		{71E49440-1FC7-4B2A-A58C-00D5968B1AEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71E49440-1FC7-4B2A-A58C-00D5968B1AEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71E49440-1FC7-4B2A-A58C-00D5968B1AEE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{71E49440-1FC7-4B2A-A58C-00D5968B1AEE}.Debug|x64.Build.0 = Debug|Any CPU
+		{71E49440-1FC7-4B2A-A58C-00D5968B1AEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71E49440-1FC7-4B2A-A58C-00D5968B1AEE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71E49440-1FC7-4B2A-A58C-00D5968B1AEE}.Release|x64.ActiveCfg = Release|Any CPU
+		{71E49440-1FC7-4B2A-A58C-00D5968B1AEE}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
