@@ -37,6 +37,8 @@ namespace ccgateway
     {
         static string folder;
         static IConfiguration config;
+        public static bool verboseLogging = false;
+
         static async Task ProcessRequest(Loader<ICCGatewayPluginAsync> loader, NetMQFrame id, string requestString)
         {
             string[] command = requestString.Split();
@@ -45,21 +47,27 @@ namespace ccgateway
             if (command.Length < 2)
             {
                 response = "poor";
-                Console.WriteLine(requestString + ": not enough parameters");
+                Console.WriteLine($"{getTimestamp()}: Not enough parameters ({requestString}).");
             }
             else
             {
                 string action = command[0];
+                if (verboseLogging) 
+                    Console.WriteLine($"{getTimestamp()}: Processing action '{action}' ({requestString}).");
 
                 ICCGatewayPluginAsync plugin = loader.Get(action);
                 if (plugin == null)
                 {
+                    if (verboseLogging)
+                        Console.WriteLine($"{getTimestamp()}: Plugin for {action} not found!");
                     response = "miss";
                 }
                 else
                 {
                     command = command.Skip(1).ToArray();
                     var pluginConfig = config.GetSection(action);
+                    if (verboseLogging)
+                        Console.WriteLine($"{getTimestamp()}: Processing request '{requestString}'.");
                     Tuple<bool, string> result;
                     try
                     {
@@ -71,13 +79,15 @@ namespace ccgateway
                     Debug.Assert(result.Item2 != null);
                     if (result.Item1)
                     {
+                        if (verboseLogging)
+                            Console.WriteLine($"{getTimestamp()}: Request '{requestString}' succeeded.");
                         response = "good";
                     }
                     else
                     {
                         StringBuilder err = new StringBuilder();
                         err.Append(requestString).Append(": ").Append(result.Item2);
-                        Console.WriteLine(err.ToString());
+                        Console.WriteLine($"{getTimestamp()}: {err.ToString()}");
                         response = "fail";
                     }
                 }
@@ -130,8 +140,22 @@ namespace ccgateway
             }
         }
 
+        static string getTimestamp()
+        {
+            return DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffffffK");
+        }
+
         static void Main(string[] args)
         {
+            if (args.Length > 0)
+            {
+                if (args[0] == "-v")
+                {
+                    verboseLogging = true;
+                    Console.WriteLine($"{getTimestamp()}: Argument '-v' found -- Verbose logging enabled.");
+                }
+            }
+
             config = new ConfigurationBuilder()
                     .AddJsonFile("appsettings.json", true, false)
                     .AddJsonFile("appsettings.dev.json", true, true)
