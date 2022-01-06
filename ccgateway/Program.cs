@@ -119,16 +119,22 @@ namespace ccgateway
             {
                 frontEnd.ReceiveReady += (sender, args) =>
                 {
-                    var message = args.Socket.ReceiveMultipartMessage();
-                    var identity = message.First;
-                    var request = message[2].ConvertToString();
-
-                    ThreadPool.QueueUserWorkItem(async ctx =>
+                    try
                     {
-                        var (loader, id, contents) = (Tuple<Loader<ICCGatewayPluginAsync>, NetMQFrame, string>)ctx;
-                        await ProcessRequest(loader, id, contents);
-                    }, Tuple.Create(loader, identity, request));
+                        var message = args.Socket.ReceiveMultipartMessage();
+                        var identity = message.First;
+                        var request = message[2].ConvertToString();
 
+                        ThreadPool.QueueUserWorkItem(async ctx =>
+                        {
+                            var (loader, id, contents) = (Tuple<Loader<ICCGatewayPluginAsync>, NetMQFrame, string>)ctx;
+                            await ProcessRequest(loader, id, contents);
+                        }, Tuple.Create(loader, identity, request));
+                    }
+                    catch (System.ArgumentOutOfRangeException e)
+                    {
+                        Console.WriteLine($"{getTimestamp()}: Exception caught, won't crash: {e}");
+                    }
                 };
                 backEnd.ReceiveReady += (sender, args) =>
                 {
